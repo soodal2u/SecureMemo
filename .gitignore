@@ -1,0 +1,24 @@
+# Build outputs
+build/
+out/
+dist/
+*.exe
+*.res
+*.o
+*.obj
+
+# IDE / local
+.vs/
+.vscode/
+.idea/
+*.user
+$null
+.grokdeck-project
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temp vault test data
+SecureMemoData/
