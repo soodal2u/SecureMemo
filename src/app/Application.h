@@ -54,6 +54,8 @@ class Application {
   void RequestUnlock();
   // Prefer visible list, else a visible note, for password-dialog placement
   HWND UnlockAnchorHwnd() const;
+  void ScheduleUpdateCheck();
+  void OnUpdateCheckResult(LPARAM lParam);
 
   HINSTANCE inst_ = nullptr;
   HWND hwnd_ = nullptr;
@@ -71,6 +73,7 @@ class Application {
   TrayIcon tray_;
   bool savePending_ = false;
   bool unlockUiBusy_ = false;  // prevent double password dialogs
+  bool updateCheckStarted_ = false;
 };
 
 }  // namespace securememo

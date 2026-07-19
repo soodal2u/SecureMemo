@@ -835,6 +835,8 @@ LRESULT NoteWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
       if (HIWORD(wParam) == EN_CHANGE) {
         dirty_ = true;
         emptyDoc_ = false;
+        // App-idle auto-lock: typing counts as activity immediately
+        if (appHwnd_) PostMessageW(appHwnd_, WM_APP_NOTE_ACTIVITY, 0, 0);
         KillTimer(hwnd_, IDT_SAVE_DEBOUNCE);
         SetTimer(hwnd_, IDT_SAVE_DEBOUNCE, 800, nullptr);
         return 0;
@@ -846,6 +848,7 @@ LRESULT NoteWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
       auto* nm = reinterpret_cast<NMHDR*>(lParam);
       if (nm && nm->hwndFrom == edit_ && nm->code == EN_CHANGE) {
         dirty_ = true;
+        if (appHwnd_) PostMessageW(appHwnd_, WM_APP_NOTE_ACTIVITY, 0, 0);
         KillTimer(hwnd_, IDT_SAVE_DEBOUNCE);
         SetTimer(hwnd_, IDT_SAVE_DEBOUNCE, 800, nullptr);
         return 0;

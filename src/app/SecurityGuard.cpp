@@ -11,7 +11,7 @@ SecurityGuard::SecurityGuard(Application* app) : app_(app) {
 
 void SecurityGuard::Start(HWND hwnd) {
   lastActivityTick_ = GetTickCount();
-  SetTimer(hwnd, IDT_AUTO_LOCK, 5000, nullptr);  // check every 5s
+  SetTimer(hwnd, IDT_AUTO_LOCK, 2000, nullptr);  // check every 2s
 }
 
 void SecurityGuard::Stop(HWND hwnd) {
@@ -26,6 +26,8 @@ void SecurityGuard::SetAutoLockMinutes(int minutes) {
 }
 
 void SecurityGuard::NotifyActivity() {
+  // Only app-side activity (typing notes, using list, etc.)
+  // NOT global mouse/keyboard elsewhere on the PC.
   lastActivityTick_ = GetTickCount();
 }
 
@@ -34,14 +36,9 @@ void SecurityGuard::OnTimer(HWND hwnd) {
   if (!app_ || !app_->IsUnlocked()) return;
   if (autoLockMinutes_ <= 0) return;
 
-  LASTINPUTINFO lii{};
-  lii.cbSize = sizeof(lii);
-  DWORD lastInput = lastActivityTick_;
-  if (GetLastInputInfo(&lii)) {
-    lastInput = lii.dwTime;
-  }
-
-  const DWORD idleMs = GetTickCount() - lastInput;
+  // Idle = no note editing / app interaction for N minutes
+  const DWORD now = GetTickCount();
+  const DWORD idleMs = now - lastActivityTick_;
   const DWORD limitMs = static_cast<DWORD>(autoLockMinutes_) * 60u * 1000u;
   if (idleMs >= limitMs) {
     app_->LockNow();

@@ -1,5 +1,7 @@
 #include "app/Application.h"
 
+#include "app/UpdateChecker.h"
+#include "app/Version.h"
 #include "crypto/Auth.h"
 #include "ui/LockDialog.h"
 #include "ui/Theme.h"
@@ -33,6 +35,7 @@ int Application::Run(HINSTANCE inst) {
   EnterLockedShell();
   tray_.Create(hwnd_);
   guard_.Start(hwnd_);
+  ScheduleUpdateCheck();
 
   MSG msg;
   while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
@@ -123,7 +126,32 @@ LRESULT Application::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
         }
         return 0;
       }
+      if (wParam == IDT_UPDATE_CHECK) {
+        KillTimer(hwnd_, IDT_UPDATE_CHECK);
+        if (!updateCheckStarted_) {
+          updateCheckStarted_ = true;
+          HANDLE th = CreateThread(
+              nullptr, 0,
+              [](LPVOID p) -> DWORD {
+                HWND hw = static_cast<HWND>(p);
+                auto* info = new UpdateInfo(CheckForUpdate());
+                PostMessageW(hw, WM_APP_UPDATE_RESULT, 0, reinterpret_cast<LPARAM>(info));
+                return 0;
+              },
+              hwnd_, 0, nullptr);
+          if (th) CloseHandle(th);
+        }
+        return 0;
+      }
       break;
+
+    case WM_APP_NOTE_ACTIVITY:
+      guard_.NotifyActivity();
+      return 0;
+
+    case WM_APP_UPDATE_RESULT:
+      OnUpdateCheckResult(lParam);
+      return 0;
 
     case WM_APP_LOCK_NOW:
       PerformLock();
@@ -359,7 +387,8 @@ void Application::ShowSettingsMenu() {
   AppendMenuW(autoLock, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(autoLock, check(0), IDM_AUTOLOCK_OFF, L"자동 잠금 끄기");
 
-  AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(autoLock), L"자동 잠금");
+  AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(autoLock),
+              L"자동 잠금 (메모 미사용 시)");
   AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
   AppendMenuW(menu, MF_STRING, IDM_CHANGE_PASSWORD, L"비밀번호 변경");
   AppendMenuW(menu, MF_STRING, IDM_LOCK, L"지금 잠금");
@@ -491,9 +520,10 @@ void Application::OnNoteCommand(NoteWindow* win, UINT cmd) {
       } else {
         wchar_t msg[128];
         if (minutes < 60)
-          swprintf(msg, 128, L"유휴 %d분 후 자동 잠금됩니다.", minutes);
+          swprintf(msg, 128, L"메모를 %d분 동안 편집하지 않으면 자동 잠금됩니다.", minutes);
         else
-          swprintf(msg, 128, L"유휴 %d시간 후 자동 잠금됩니다.", minutes / 60);
+          swprintf(msg, 128, L"메모를 %d시간 동안 편집하지 않으면 자동 잠금됩니다.",
+                   minutes / 60);
         MessageBoxW(list_.Hwnd() ? list_.Hwnd() : hwnd_, msg, kAppTitle,
                     MB_OK | MB_ICONINFORMATION);
       }
@@ -506,6 +536,35 @@ void Application::OnNoteCommand(NoteWindow* win, UINT cmd) {
 
 void Application::LockNow() {
   PostMessageW(hwnd_, WM_APP_LOCK_NOW, 0, 0);
+}
+
+void Application::ScheduleUpdateCheck() {
+  // Delay a few seconds after start so UI appears first
+  SetTimer(hwnd_, IDT_UPDATE_CHECK, 4000, nullptr);
+}
+
+void Application::OnUpdateCheckResult(LPARAM lParam) {
+  auto* info = reinterpret_cast<UpdateInfo*>(lParam);
+  if (!info) return;
+  if (!info->error.empty() || !info->available) {
+    delete info;
+    return;
+  }
+
+  std::wstring msg = L"새 버전이 있습니다.\n\n";
+  msg += L"현재: ";
+  msg += SECUREMEMO_VERSION_WIDE;
+  msg += L"\n최신: ";
+  msg += info->latestVersion;
+  msg += L"\n\n지금 업데이트를 설치할까요?\n(설치 프로그램이 실행됩니다)";
+
+  HWND owner = UnlockAnchorHwnd();
+  const int r = MessageBoxW(owner, msg.c_str(), L"SecureMemo Update",
+                            MB_YESNO | MB_ICONINFORMATION | MB_TOPMOST);
+  if (r == IDYES && !info->downloadUrl.empty()) {
+    DownloadAndRunSetup(info->downloadUrl, owner);
+  }
+  delete info;
 }
 
 void Application::PerformLock() {

@@ -113,6 +113,7 @@ enum CommandId : UINT {
   IDT_SAVE_DEBOUNCE = 2001,
   IDT_AUTO_LOCK = 2002,
   IDT_TRAY = 2003,
+  IDT_UPDATE_CHECK = 2004,
   HIT_NONE = 0,
   HIT_DRAG = 1,
   HIT_NEW = 2,
@@ -129,6 +130,8 @@ enum CommandId : UINT {
   WM_APP_OPEN_NOTE = WM_APP + 5,
   // Second process → first process: show UI, do not start another vault session
   WM_APP_ACTIVATE_EXISTING = WM_APP + 6,
+  WM_APP_UPDATE_RESULT = WM_APP + 7,
+  WM_APP_NOTE_ACTIVITY = WM_APP + 8,
 };
 
 // Named mutex — only one SecureMemo process may own the vault

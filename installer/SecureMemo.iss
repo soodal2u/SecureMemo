@@ -3,7 +3,7 @@
 
 #define MyAppName "보안 메모"
 #define MyAppNameEn "SecureMemo"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "SecureMemo"
 #define MyAppExeName "SecureMemo.exe"
 

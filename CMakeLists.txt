@@ -17,6 +17,7 @@ add_executable(SecureMemo WIN32
   src/app/Application.cpp
   src/app/NoteManager.cpp
   src/app/SecurityGuard.cpp
+  src/app/UpdateChecker.cpp
   src/crypto/Auth.cpp
   src/crypto/Crypto.cpp
   src/crypto/VaultStorage.cpp
@@ -43,6 +44,7 @@ if(MSVC)
     dwmapi
     comdlg32
     uxtheme
+    winhttp
   )
 else()
   target_link_libraries(SecureMemo PRIVATE
@@ -57,6 +59,7 @@ else()
     dwmapi
     comdlg32
     uxtheme
+    winhttp
   )
   add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
   # Static-ish CRT not forced; keep default for MinGW/LLVM
